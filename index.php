@@ -1,33 +1,38 @@
 <?php
 $jsonFile = 'profile.json';
+$message = "";     // Текст сообщения
+$messageType = ""; // Тип сообщения: success или error
 
-// 1. Načtení dat (vždy na začátku, abychom měli aktuální seznam)
+// Загрузка данных
 if (file_exists($jsonFile)) {
     $jsonString = file_get_contents($jsonFile);
     $data = json_decode($jsonString, true);
 } else {
-    // Pokud soubor neexistuje, vytvoříme prázdnou strukturu
-    $data = ['name' => 'Nezadáno', 'skill' => [], 'interests' => []];
+    $data = ['name' => 'Ukázkový Profil', 'skill' => [], 'interests' => []];
 }
 
-// 2. Zpracování POST požadavku (přidání nového zájmu)
+// Обработка формы
 if (isset($_POST["new_interest"])) {
     $new_interest = trim($_POST["new_interest"]);
-
-    if (!empty($new_interest)) {
-        // Příprava pro kontrolu duplicit (převod existujících na malá písmena)
+    
+    if (empty($new_interest)) {
+        $message = "Pole nesmí být prázdné.";
+        $messageType = "error";
+    } else {
         $existingInterestsLower = array_map('strtolower', $data['interests'] ?? []);
-
-        // Kontrola duplicity bez ohledu na velikost písmen
-        if (!in_array(strtolower($new_interest), $existingInterestsLower)) {
-            // Přidání do pole a uložení
+        
+        if (in_array(strtolower($new_interest), $existingInterestsLower)) {
+            $message = "Tento zájem už existuje.";
+            $messageType = "error";
+        } else {
             $data['interests'][] = $new_interest;
             file_put_contents($jsonFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $message = "Zájem byl úspěšně přidán.";
+            $messageType = "success";
         }
     }
 }
 
-// Příprava proměnných pro zobrazení v HTML
 $name = $data['name'] ?? 'Jméno nebylo zadáno';
 $skills = $data['skill'] ?? [];
 $interests = $data['interests'] ?? [];
@@ -37,38 +42,47 @@ $interests = $data['interests'] ?? [];
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil: <?php echo htmlspecialchars($name); ?></title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div class="container">
         <h1><?php echo htmlspecialchars($name); ?></h1>
 
-        <!-- Formulář pro přidání zájmu -->
-        <section class="form-section">
+        <section class="card">
             <h2>Přidat nový zájem</h2>
-            <form method="POST">
-                <input type="text" name="new_interest" placeholder="Napište zájem..." required>
+
+            <!-- Блок вывода сообщения из изображения -->
+            <?php if (!empty($message)): ?>
+                <p class="alert <?php echo $messageType; ?>">
+                    <?php echo htmlspecialchars($message); ?>
+                </p>
+            <?php endif; ?>
+
+            <form method="POST" class="form-add">
+                <input type="text" name="new_interest" placeholder="Co tě baví?" required>
                 <button type="submit">Přidat</button>
             </form>
         </section>
 
-        <h2>Moje dovednosti</h2>
-        <ul>
-            <?php foreach ($skills as $s): ?>
-                <li><?php echo htmlspecialchars($s); ?></li>
-            <?php endforeach; ?>
-        </ul>
-
-        <h2>Zájmy a projekty</h2>
-        <ul>
-            <?php foreach ($interests as $interest): ?>
-                <li><?php echo htmlspecialchars($interest); ?></li>
-            <?php endforeach; ?>
-        </ul>
+        <div class="grid">
+            <section class="card">
+                <h2>Dovednosti</h2>
+                <ul class="list">
+                    <?php foreach ($skills as $s): ?>
+                        <li><?php echo htmlspecialchars($s); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+            <section class="card">
+                <h2>Zájmy</h2>
+                <ul class="list highlight">
+                    <?php foreach ($interests as $interest): ?>
+                        <li><?php echo htmlspecialchars($interest); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+        </div>
     </div>
-
 </body>
 </html>
